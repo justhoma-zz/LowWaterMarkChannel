@@ -17,7 +17,7 @@ namespace LowWaterMarkChannel
 
             // If you don't set the low water mark you should see a 5 second pause every 10 items 
             // If you set the low water mark there should be no pause
-            //nextSequenceProvider.LowWaterMark = 5;
+            nextSequenceProvider.LowWaterMark = 5;
 
             var cancellationTokenSource = new CancellationTokenSource();
 
@@ -35,7 +35,8 @@ namespace LowWaterMarkChannel
                 while (!cancellationTokenSource.IsCancellationRequested)
                 {
                     await Task.Delay(1000);
-                    _ = await nextSequenceProvider.ReadAsync();
+                    var sequence = await nextSequenceProvider.ReadAsync();
+                    Console.WriteLine($"{DateTime.Now:T} Got a sequence {sequence}");
                 }
             });
         }

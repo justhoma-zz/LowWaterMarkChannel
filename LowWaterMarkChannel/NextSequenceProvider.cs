@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -12,7 +11,6 @@ namespace LowWaterMarkChannel
         private readonly Func<int, Task<int[]>> _loadChannelAction;
         private readonly Channel<int> _channel;
         private static readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1);
-
         private Task<int[]> _loadTask;
 
         public int? LowWaterMark { get; set; }
@@ -21,7 +19,7 @@ namespace LowWaterMarkChannel
         {
             _capacity = capacity;
             _loadChannelAction = loadChannelAction;
-            
+
             _channel = Channel.CreateBounded<int>(new BoundedChannelOptions(_capacity)
             {
                 SingleWriter = true,
@@ -37,7 +35,7 @@ namespace LowWaterMarkChannel
             {
                 if (_channel.Reader.Count == 0)
                 {
-                    var sequences = Array.Empty<int>();
+                    int[] sequences = Array.Empty<int>();
 
                     if (_loadTask != null)
                     {
@@ -48,13 +46,13 @@ namespace LowWaterMarkChannel
                     else
                     {
                         // The channel is empty so get the sequences synchronously
-                        sequences = await _loadChannelAction(_capacity);
+                        sequences = await _loadChannelAction(_capacity).ConfigureAwait(false);
                     }
 
                     // Now write all the sequences to the channel
-                    foreach (var sequence in sequences)
+                    foreach (int sequence in sequences)
                     {
-                        await _channel.Writer.WriteAsync(sequence);
+                        await _channel.Writer.WriteAsync(sequence).ConfigureAwait(false);
                     }
                 }
                 else if (LowWaterMark.HasValue && _channel.Reader.Count == LowWaterMark)
@@ -66,10 +64,8 @@ namespace LowWaterMarkChannel
                     });
                 }
 
-                // Get the sequence
-                var currentSequence = await _channel.Reader.ReadAsync();
-                Console.WriteLine($"{DateTime.Now:T} Got a sequence {currentSequence}\tReader count: {_channel.Reader.Count}");
-                return currentSequence;
+                // Get and return the sequence
+                return await _channel.Reader.ReadAsync().ConfigureAwait(false);
             }
             finally
             {
