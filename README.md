@@ -1,5 +1,13 @@
-### Usage
+### Description
 
-The following code demonstrates basic usage of EF Core. For a full tutorial configuring the `DbContext`, defining the model, and creating the database, see [getting started](https://docs.microsoft.com/ef/core/get-started/) in the docs.
+How to use a Channel with a low-water mark.
 
-```cs
+### Usage 
+
+The NextSequencerProvider object accepts the followin paramaters
+
+- **fetchMax** The maxiumum number of values to queue up
+- **fetchMin** The low water mark
+
+ 
+If you execute the console app you will see that every second an attempt will be made to read an item off of the channel.

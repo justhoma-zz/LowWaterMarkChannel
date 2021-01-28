@@ -13,12 +13,10 @@ namespace LowWaterMarkChannel
             var nextSequenceProvider = new NextSequenceProvider(fetchMax, fetchMin);
             var cancellationTokenSource = new CancellationTokenSource();
 
-            Console.WriteLine("Application started.");
-            Console.WriteLine("Press the ENTER key to cancel...");
-
             // Add the ability to cancel
             _ = Task.Run(() =>
             {
+                Console.WriteLine("Press the ENTER key to cancel...");
                 while (Console.ReadKey().Key != ConsoleKey.Enter) { }
                 cancellationTokenSource.Cancel();
             });
@@ -32,8 +30,6 @@ namespace LowWaterMarkChannel
                     _ = await nextSequenceProvider.ReadAsync();
                 }
             });
-
-            Console.WriteLine("Application ending.");
         }
     }
 }
