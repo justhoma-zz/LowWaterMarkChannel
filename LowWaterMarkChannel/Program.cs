@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -8,9 +9,16 @@ namespace LowWaterMarkChannel
     {
         private static async Task Main()
         {
-            var fetchMin = 5;
-            var fetchMax = 10;
-            var nextSequenceProvider = new NextSequenceProvider(fetchMax, fetchMin);
+            var nextSequenceProvider = new NextSequenceProvider
+                (
+                    capacity: 10,
+                    loadChannelAction: async (batchSize) => await LoadAction(batchSize).ConfigureAwait(false)
+                );
+
+            // If you don't set the low water mark you should see a 5 second pause every 10 items 
+            // If you set the low water mark there should be no pause
+            //nextSequenceProvider.LowWaterMark = 5;
+
             var cancellationTokenSource = new CancellationTokenSource();
 
             // Add the ability to cancel
@@ -30,6 +38,16 @@ namespace LowWaterMarkChannel
                     _ = await nextSequenceProvider.ReadAsync();
                 }
             });
+        }
+
+        // The code to pause for 5 seconds and then return a block of sequences
+        private static int _nextSequenceStartingValue = 1;
+        private static async Task<int[]> LoadAction(int batchSize)
+        {
+            await Task.Delay(5000).ConfigureAwait(false);
+            var returnValue = Enumerable.Range(_nextSequenceStartingValue, batchSize).ToArray();
+            _nextSequenceStartingValue += batchSize;
+            return returnValue;
         }
     }
 }

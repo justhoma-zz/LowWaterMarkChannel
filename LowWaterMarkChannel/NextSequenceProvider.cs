@@ -8,19 +8,21 @@ namespace LowWaterMarkChannel
 {
     internal class NextSequenceProvider
     {
-        private readonly int _fetchMax;
-        private readonly int _fetchMin;
+        private readonly int _capacity;
+        private readonly Func<int, Task<int[]>> _loadChannelAction;
         private readonly Channel<int> _channel;
         private static readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1);
 
         private Task<int[]> _loadTask;
 
-        public NextSequenceProvider(int fetchMax, int fetchMin)
+        public int? LowWaterMark { get; set; }
+
+        public NextSequenceProvider(int capacity, Func<int, Task<int[]>> loadChannelAction)
         {
-            _fetchMax = fetchMax;
-            _fetchMin = fetchMin; 
+            _capacity = capacity;
+            _loadChannelAction = loadChannelAction;
             
-            _channel = Channel.CreateBounded<int>(new BoundedChannelOptions(_fetchMax)
+            _channel = Channel.CreateBounded<int>(new BoundedChannelOptions(_capacity)
             {
                 SingleWriter = true,
                 SingleReader = true
@@ -46,7 +48,7 @@ namespace LowWaterMarkChannel
                     else
                     {
                         // The channel is empty so get the sequences synchronously
-                        sequences = await GetSequencesAsync(_fetchMax);
+                        sequences = await _loadChannelAction(_capacity);
                     }
 
                     // Now write all the sequences to the channel
@@ -55,13 +57,12 @@ namespace LowWaterMarkChannel
                         await _channel.Writer.WriteAsync(sequence);
                     }
                 }
-                // If you commeout this out then the low water mark functionality will not happen
-                else if (_channel.Reader.Count == _fetchMin)
+                else if (LowWaterMark.HasValue && _channel.Reader.Count == LowWaterMark)
                 {
-                    // The channel has hit the low water mark so fire up a task to load it
+                    // If the low water mark has been supplied and it's hit fire up the load task
                     _loadTask = Task.Run(async () =>
                     {
-                        return await GetSequencesAsync(_fetchMax);
+                        return await _loadChannelAction(_capacity);
                     });
                 }
 
@@ -74,16 +75,6 @@ namespace LowWaterMarkChannel
             {
                 _ = _semaphoreSlim.Release();
             }
-        }
-
-        // The code to get a block of sequences
-        private static int _nextSequenceStartingValue = 1;
-        private static async Task<int[]> GetSequencesAsync(int batchSize)
-        {
-            await Task.Delay(5000).ConfigureAwait(false);
-            var returnValue = Enumerable.Range(_nextSequenceStartingValue, batchSize).ToArray();
-            _nextSequenceStartingValue += batchSize;
-            return returnValue;
         }
     }
 }
