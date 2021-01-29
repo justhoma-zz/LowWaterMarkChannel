@@ -40,7 +40,7 @@ namespace LowWaterMarkChannel
                 // Channel is empty
                 if (_channel.Reader.Count == 0)
                 {
-                    int[] sequences = Array.Empty<int>();
+                    var sequences = Array.Empty<int>();
 
                     if (_loadTask != null)
                     {
@@ -56,7 +56,7 @@ namespace LowWaterMarkChannel
                     }
 
                     // Now write all the sequences to the channel
-                    foreach (int sequence in sequences)
+                    foreach (var sequence in sequences)
                     {
                         await _channel.Writer.WriteAsync(sequence).ConfigureAwait(false);
                     }
