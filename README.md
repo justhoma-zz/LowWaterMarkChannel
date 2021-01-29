@@ -21,6 +21,6 @@ If you execute with a low water mark of 15 the pause will no longer occur.
 ### Notes
 This does not guarantee that there will never be any blocking. 
 For example blocking will occur if:
-- The speed at which the items are read exceeds the time taken to load the items
+- The items are being read faster than the time it takes to load new ones.
 
 
