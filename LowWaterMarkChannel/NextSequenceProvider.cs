@@ -29,35 +29,37 @@ namespace LowWaterMarkChannel
 
         internal async Task<int> ReadAsync()
         {
-            await _semaphoreSlim.WaitAsync();
+            // Prevent concurrent access from multiple threads
+            await _semaphoreSlim.WaitAsync().ConfigureAwait(false);
 
             try
             {
+                // Channel is empty
                 if (_channel.Reader.Count == 0)
                 {
-                    int[] sequences = Array.Empty<int>();
+                    var sequences = Array.Empty<int>();
 
                     if (_loadTask != null)
                     {
-                        // The channel is empty but there is an in-flight load task so wait for it to complete
-                        sequences = await _loadTask;
+                        // There is an in-flight load task so wait for it to complete
+                        sequences = await _loadTask.ConfigureAwait(false);
                         _loadTask = null;
                     }
                     else
                     {
-                        // The channel is empty so get the sequences synchronously
+                        // Get the sequences
                         sequences = await _loadChannelAction(_capacity).ConfigureAwait(false);
                     }
 
                     // Now write all the sequences to the channel
-                    foreach (int sequence in sequences)
+                    foreach (var sequence in sequences)
                     {
                         await _channel.Writer.WriteAsync(sequence).ConfigureAwait(false);
                     }
                 }
+                // Low water mark has been set and it's hit
                 else if (LowWaterMark.HasValue && _channel.Reader.Count == LowWaterMark)
                 {
-                    // If the low water mark has been supplied and it's hit fire up the load task
                     _loadTask = Task.Run(async () =>
                     {
                         return await _loadChannelAction(_capacity);

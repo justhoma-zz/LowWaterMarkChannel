@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,44 +12,55 @@ namespace LowWaterMarkChannel
         {
             var nextSequenceProvider = new NextSequenceProvider
                 (
-                    capacity: 10,
+                    capacity: 20,
                     loadChannelAction: async (batchSize) => await LoadAction(batchSize).ConfigureAwait(false)
                 );
 
-            // If you don't set the low water mark you should see a 5 second pause every 10 items 
+            // If you don't set the low water mark you should see a 3 second pause every 20 items
             // If you set the low water mark there should be no pause
-            nextSequenceProvider.LowWaterMark = 5;
+            nextSequenceProvider.LowWaterMark = 15;
 
             var cancellationTokenSource = new CancellationTokenSource();
 
             // Add the ability to cancel
             _ = Task.Run(() =>
             {
-                Console.WriteLine("Press the ENTER key to cancel...");
+                Console.WriteLine($"Low Water Mark Enabled: {nextSequenceProvider.LowWaterMark.HasValue}. Press the ENTER key to cancel...");
                 while (Console.ReadKey().Key != ConsoleKey.Enter) { }
                 cancellationTokenSource.Cancel();
             });
 
-            // Add a new read task every second until cancelled
+            // Add 5 get tasks every second until cancelled
             await Task.Run(async () =>
             {
                 while (!cancellationTokenSource.IsCancellationRequested)
                 {
-                    await Task.Delay(1000);
-                    var sequence = await nextSequenceProvider.ReadAsync();
-                    Console.WriteLine($"{DateTime.Now:T} Got a sequence {sequence}");
+                    var tasks = new List<Task>();
+                    for (var i = 0; i < 5; i++)
+                    {
+                        tasks.Add(GetSequenceAsync(nextSequenceProvider));
+                    }
+                    await Task.WhenAll(tasks).ConfigureAwait(false);
                 }
             });
         }
 
-        // The code to pause for 5 seconds and then return a block of sequences
+        // The code that will wait 1 second and then read a value
+        private static async Task GetSequenceAsync(NextSequenceProvider nextSequenceProvider)
+        {
+            await Task.Delay(1000);
+            var sequence = await nextSequenceProvider.ReadAsync().ConfigureAwait(false);
+            Console.WriteLine($"{DateTime.Now:ss:f} Got a sequence {sequence}");
+        }
+
+        // The code to pause and then return a block of sequences
         private static int _nextSequenceStartingValue = 1;
         private static async Task<int[]> LoadAction(int batchSize)
         {
-            await Task.Delay(5000).ConfigureAwait(false);
-            var returnValue = Enumerable.Range(_nextSequenceStartingValue, batchSize).ToArray();
+            await Task.Delay(3000).ConfigureAwait(false);
+            var returnValue = Enumerable.Range(_nextSequenceStartingValue, batchSize);
             _nextSequenceStartingValue += batchSize;
-            return returnValue;
+            return returnValue.ToArray();
         }
     }
 }
