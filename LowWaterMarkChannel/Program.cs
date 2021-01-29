@@ -24,7 +24,7 @@ namespace LowWaterMarkChannel
             // Add the ability to cancel
             _ = Task.Run(() =>
             {
-                Console.WriteLine($"Low Water Mark Enabled: {nextSequenceProvider.LowWaterMark.HasValue}. Press the ENTER key to cancel...");
+                Console.WriteLine($"Press the ENTER key to cancel...");
                 while (Console.ReadKey().Key != ConsoleKey.Enter) { }
                 cancellationTokenSource.Cancel();
             });

@@ -7,22 +7,23 @@ namespace LowWaterMarkChannel
 {
     internal class NextSequenceProvider
     {
+        private readonly int _capacity;
+        private readonly int? _lowWaterMark;
         private readonly Func<int, Task<int[]>> _loadChannelAction;
         private readonly Channel<int> _channel;
         private static readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1);
         private Task<int[]> _loadTask;
 
-        public int Capacity { get; }
-
-        public int? LowWaterMark { get; }
-
-        public NextSequenceProvider(int capacity, int? lowWaterMark, Func<int, Task<int[]>> loadChannelAction)
+        public NextSequenceProvider(
+            int capacity, 
+            int? lowWaterMark, 
+            Func<int, Task<int[]>> loadChannelAction)
         {
-            Capacity = capacity;
-            LowWaterMark = lowWaterMark;
+            _capacity = capacity;
+            _lowWaterMark = lowWaterMark;
             _loadChannelAction = loadChannelAction;
 
-            _channel = Channel.CreateBounded<int>(new BoundedChannelOptions(Capacity)
+            _channel = Channel.CreateBounded<int>(new BoundedChannelOptions(_capacity)
             {
                 SingleWriter = true,
                 SingleReader = true
@@ -51,7 +52,7 @@ namespace LowWaterMarkChannel
                     else
                     {
                         // Get the sequences
-                        sequences = await _loadChannelAction(Capacity).ConfigureAwait(false);
+                        sequences = await _loadChannelAction(_capacity).ConfigureAwait(false);
                     }
 
                     // Now write all the sequences to the channel
@@ -61,11 +62,11 @@ namespace LowWaterMarkChannel
                     }
                 }
                 // Low water mark has been set and it's hit
-                else if (LowWaterMark.HasValue && _channel.Reader.Count == LowWaterMark)
+                else if (_lowWaterMark.HasValue && _channel.Reader.Count == _lowWaterMark)
                 {
                     _loadTask = Task.Run(async () =>
                     {
-                        return await _loadChannelAction(Capacity).ConfigureAwait(false);
+                        return await _loadChannelAction(_capacity).ConfigureAwait(false);
                     });
                 }
 
