@@ -10,17 +10,17 @@ namespace LowWaterMarkChannel
     {
         private static async Task Main()
         {
+            var cancellationTokenSource = new CancellationTokenSource();
+
             var nextSequenceProvider = new NextSequenceProvider
                 (
                     capacity: 20,
                     loadChannelAction: async (batchSize) => await LoadAction(batchSize).ConfigureAwait(false)
                 );
 
-            // If you don't set the low water mark you should see a 3 second pause every 20 items
+            // If you don't supply the low water mark you should see a 3 second pause every 20 items
             // If you set the low water mark there should be no pause
             nextSequenceProvider.LowWaterMark = 15;
-
-            var cancellationTokenSource = new CancellationTokenSource();
 
             // Add the ability to cancel
             _ = Task.Run(() =>
@@ -53,7 +53,7 @@ namespace LowWaterMarkChannel
             Console.WriteLine($"{DateTime.Now:ss:f} Got a sequence {sequence}");
         }
 
-        // The code to pause and then return a block of sequences
+        // The code to will wait 3 seconds then return a block of sequences
         private static int _nextSequenceStartingValue = 1;
         private static async Task<int[]> LoadAction(int batchSize)
         {
