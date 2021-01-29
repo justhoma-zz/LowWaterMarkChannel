@@ -1,6 +1,6 @@
 ## Description
 The **NextSequenceProvider** utilizes a bounded Channel to store a list of ints and exposes a *GetAsync* method for retrieving these in a thread-safe manner.
-It supports the concept of a Low Water mark, meaning that when this is hit the channel will be refilled, potentially without blocking.
+It supports the concept of a low water mark, meaning that when this is hit the channel will be refilled, potentially without blocking.
 
 It accepts the following parameters
 

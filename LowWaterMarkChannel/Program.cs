@@ -15,8 +15,8 @@ namespace LowWaterMarkChannel
             var nextSequenceProvider = new NextSequenceProvider
                 (
                     capacity: 20,
-                    // If you don't supply the low water mark you should see a 3 second pause every 20 items
-                    // If you set the low water mark there should be no pause
+                    // If the low water mark is null you should see a 3 second pause every 20 items
+                    // If the low water mark is 15 there should be no pause
                     lowWaterMark: 15,
                     loadChannelAction: async (batchSize) => await LoadAction(batchSize).ConfigureAwait(false)
                 );
