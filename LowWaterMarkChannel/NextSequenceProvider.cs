@@ -15,8 +15,8 @@ namespace LowWaterMarkChannel
         private Task<int[]> _loadTask;
 
         public NextSequenceProvider(
-            int capacity, 
-            int? lowWaterMark, 
+            int capacity,
+            int? lowWaterMark,
             Func<int, Task<int[]>> loadChannelAction)
         {
             _capacity = capacity;
@@ -30,7 +30,7 @@ namespace LowWaterMarkChannel
             });
         }
 
-        internal async Task<int> ReadAsync()
+        internal async ValueTask<int> ReadAsync()
         {
             // Prevent concurrent access
             await _semaphoreSlim.WaitAsync().ConfigureAwait(false);
@@ -40,7 +40,7 @@ namespace LowWaterMarkChannel
                 // Channel is empty
                 if (_channel.Reader.Count == 0)
                 {
-                    var sequences = Array.Empty<int>();
+                    int[] sequences = Array.Empty<int>();
 
                     if (_loadTask != null)
                     {
@@ -51,12 +51,12 @@ namespace LowWaterMarkChannel
                     }
                     else
                     {
-                        // Get the sequences
+                        // Get the sequences and wait
                         sequences = await _loadChannelAction(_capacity).ConfigureAwait(false);
                     }
 
                     // Now write all the sequences to the channel
-                    foreach (var sequence in sequences)
+                    foreach (int sequence in sequences)
                     {
                         await _channel.Writer.WriteAsync(sequence).ConfigureAwait(false);
                     }
@@ -64,6 +64,7 @@ namespace LowWaterMarkChannel
                 // Low water mark has been set and it's hit
                 else if (_lowWaterMark.HasValue && _channel.Reader.Count == _lowWaterMark)
                 {
+                    // Spin up the loadtask but don't wait for it to complete
                     _loadTask = Task.Run(async () =>
                     {
                         return await _loadChannelAction(_capacity).ConfigureAwait(false);

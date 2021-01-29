@@ -44,7 +44,7 @@ namespace LowWaterMarkChannel
             }).ConfigureAwait(false);
         }
 
-        // The code to Get a value from the NextSequenceProvider
+        // The code to get a value from the NextSequenceProvider
         private static async Task GetSequenceAsync(NextSequenceProvider nextSequenceProvider)
         {
             await Task.Delay(1000).ConfigureAwait(false);
