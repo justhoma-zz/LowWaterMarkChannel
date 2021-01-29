@@ -7,20 +7,22 @@ namespace LowWaterMarkChannel
 {
     internal class NextSequenceProvider
     {
-        private readonly int _capacity;
         private readonly Func<int, Task<int[]>> _loadChannelAction;
         private readonly Channel<int> _channel;
         private static readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1);
         private Task<int[]> _loadTask;
 
-        public int? LowWaterMark { get; set; }
+        public int Capacity { get; }
 
-        public NextSequenceProvider(int capacity, Func<int, Task<int[]>> loadChannelAction)
+        public int? LowWaterMark { get; }
+
+        public NextSequenceProvider(int capacity, int? lowWaterMark, Func<int, Task<int[]>> loadChannelAction)
         {
-            _capacity = capacity;
+            Capacity = capacity;
+            LowWaterMark = lowWaterMark;
             _loadChannelAction = loadChannelAction;
 
-            _channel = Channel.CreateBounded<int>(new BoundedChannelOptions(_capacity)
+            _channel = Channel.CreateBounded<int>(new BoundedChannelOptions(Capacity)
             {
                 SingleWriter = true,
                 SingleReader = true
@@ -29,7 +31,7 @@ namespace LowWaterMarkChannel
 
         internal async Task<int> ReadAsync()
         {
-            // Prevent concurrent access from multiple threads
+            // Prevent concurrent access
             await _semaphoreSlim.WaitAsync().ConfigureAwait(false);
 
             try
@@ -43,12 +45,13 @@ namespace LowWaterMarkChannel
                     {
                         // There is an in-flight load task so wait for it to complete
                         sequences = await _loadTask.ConfigureAwait(false);
+                        _loadTask.Dispose();
                         _loadTask = null;
                     }
                     else
                     {
                         // Get the sequences
-                        sequences = await _loadChannelAction(_capacity).ConfigureAwait(false);
+                        sequences = await _loadChannelAction(Capacity).ConfigureAwait(false);
                     }
 
                     // Now write all the sequences to the channel
@@ -62,7 +65,7 @@ namespace LowWaterMarkChannel
                 {
                     _loadTask = Task.Run(async () =>
                     {
-                        return await _loadChannelAction(_capacity);
+                        return await _loadChannelAction(Capacity).ConfigureAwait(false);
                     });
                 }
 

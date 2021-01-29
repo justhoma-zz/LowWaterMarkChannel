@@ -15,12 +15,11 @@ namespace LowWaterMarkChannel
             var nextSequenceProvider = new NextSequenceProvider
                 (
                     capacity: 20,
+                    // If you don't supply the low water mark you should see a 3 second pause every 20 items
+                    // If you set the low water mark there should be no pause
+                    lowWaterMark: 15,
                     loadChannelAction: async (batchSize) => await LoadAction(batchSize).ConfigureAwait(false)
                 );
-
-            // If you don't supply the low water mark you should see a 3 second pause every 20 items
-            // If you set the low water mark there should be no pause
-            nextSequenceProvider.LowWaterMark = 15;
 
             // Add the ability to cancel
             _ = Task.Run(() =>
@@ -42,18 +41,18 @@ namespace LowWaterMarkChannel
                     }
                     await Task.WhenAll(tasks).ConfigureAwait(false);
                 }
-            });
+            }).ConfigureAwait(false);
         }
 
-        // The code that will wait 1 second and then read a value
+        // The code to Get a value from the NextSequenceProvider
         private static async Task GetSequenceAsync(NextSequenceProvider nextSequenceProvider)
         {
-            await Task.Delay(1000);
+            await Task.Delay(1000).ConfigureAwait(false);
             var sequence = await nextSequenceProvider.ReadAsync().ConfigureAwait(false);
             Console.WriteLine($"{DateTime.Now:ss:f} Got a sequence {sequence}");
         }
 
-        // The code to will wait 3 seconds then return a block of sequences
+        // The code that returns the 'next' block of sequences
         private static int _nextSequenceStartingValue = 1;
         private static async Task<int[]> LoadAction(int batchSize)
         {

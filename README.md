@@ -1,16 +1,26 @@
-### Usage 
+## Description
+The **NextSequenceProvider** utilizes a bounded Channel to store a list of ints and exposes a *GetAsync* method for retrieving these in a thread-safe manner.
+It supports the concept of a Low Water mark, meaning that when this is hit the channel will be refilled, potentially without blocking.
 
-The NextSequencerProvider object accepts the following parameters
+It accepts the following parameters
 
 - **capacity** the maxiumum number of values
+- **lowWaterMark** the low water mark
 - **loadChannelAction** the action to load items into the channel
 
-If you execute the app you will see that every second 5 concurrent tasks will be spun up to read an item from the channel.
+### Usage 
+
+The test app will spin up 5 concurrent tasks every second to read an item from the channel.
 
 ### Without Low Water Mark 
 If you execute without a low water mark the code will pause every 20 items while the code waits for the *loadChannelAction* task to complete.
 
 ### With Low Water Mark 
-If you execute with a low water mark the pause will no longer occur.
+If you execute with a low water mark of 15 the pause will no longer occur.
+
+### Notes
+This does not guarantee that there will never be any blocking. 
+For example blocking will occur if:
+- The speed at which the items are read exceeds the time taken to load the items
 
 
